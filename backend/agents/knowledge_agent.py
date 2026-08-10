@@ -1,9 +1,15 @@
 from pathlib import Path
 
+# ==========================================================
+# ChromaDB - Optional
+# ==========================================================
+
 try:
     import chromadb
     from chromadb.utils import embedding_functions
+
     CHROMA_AVAILABLE = True
+
 except ImportError:
     chromadb = None
     embedding_functions = None
@@ -11,29 +17,49 @@ except ImportError:
 
 
 # ==========================================================
-# ChromaDB
+# ChromaDB Configuration
 # ==========================================================
 
 BASE_DIR = Path(__file__).parent.parent
 
 CHROMA_DIR = BASE_DIR / "knowledge" / "chroma_db"
 
+
+# ==========================================================
+# Initialize ChromaDB Only If Available
+# ==========================================================
+
 if CHROMA_AVAILABLE:
-    client = chromadb.PersistentClient(
-        path=str(CHROMA_DIR)
-    )
 
-    embedding_function = (
-        embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="all-MiniLM-L6-v2"
+    try:
+        client = chromadb.PersistentClient(
+            path=str(CHROMA_DIR)
         )
-    )
 
-    collection = client.get_or_create_collection(
-        name="support_knowledge",
-        embedding_function=embedding_function
-    )
+        embedding_function = (
+            embedding_functions.SentenceTransformerEmbeddingFunction(
+                model_name="all-MiniLM-L6-v2"
+            )
+        )
+
+        collection = client.get_or_create_collection(
+            name="support_knowledge",
+            embedding_function=embedding_function
+        )
+
+    except Exception as e:
+
+        print("ChromaDB initialization failed:")
+        print(str(e))
+
+        CHROMA_AVAILABLE = False
+
+        client = None
+        embedding_function = None
+        collection = None
+
 else:
+
     client = None
     embedding_function = None
     collection = None
@@ -44,6 +70,7 @@ else:
 # ==========================================================
 
 # Lower ChromaDB distance = more relevant
+
 DISTANCE_THRESHOLD = 0.75
 
 TOP_K = 3
@@ -56,6 +83,7 @@ TOP_K = 3
 DOMAIN_RULES = {
 
     "internet": {
+
         "keywords": [
             "internet",
             "wifi",
@@ -72,12 +100,14 @@ DOMAIN_RULES = {
             "router light",
             "router lights"
         ],
+
         "sources": [
             "internet_support.pdf"
         ]
     },
 
     "billing": {
+
         "keywords": [
             "bill",
             "billing",
@@ -90,6 +120,7 @@ DOMAIN_RULES = {
             "payment failed",
             "incorrect bill"
         ],
+
         "sources": [
             "billing_policy.pdf"
         ]
@@ -146,6 +177,7 @@ def source_matches_domain(
 
     # If domain cannot be detected,
     # allow vector search to decide.
+
     if detected_domain is None:
         return True
 
@@ -226,9 +258,22 @@ def remove_duplicates(
 
 def search_knowledge(message):
 
+    # ======================================================
+    # ChromaDB Not Available
+    # ======================================================
+
     if not CHROMA_AVAILABLE:
-        print("⚠ ChromaDB is not available. Using fallback knowledge.")
+
+        print(
+            "⚠ ChromaDB is not available."
+        )
+
+        print(
+            "Using fallback knowledge."
+        )
+
         return fallback_knowledge()
+
 
     print("\n" + "=" * 80)
     print("📚 KNOWLEDGE RECOMMENDATION AGENT (RAG)")
@@ -236,6 +281,7 @@ def search_knowledge(message):
 
     print("\n📩 Customer Message:")
     print(message)
+
 
     try:
 
@@ -248,6 +294,7 @@ def search_knowledge(message):
         )
 
         print("\nDetected Domain:")
+
         print(
             detected_domain
             if detected_domain
@@ -316,16 +363,19 @@ def search_knowledge(message):
         print("🔎 RAW RETRIEVAL RESULTS")
         print("=" * 80)
 
+
         for index, (
             document,
             metadata,
             distance
         ) in enumerate(
+
             zip(
                 documents,
                 metadatas,
                 distances
             ),
+
             start=1
         ):
 
@@ -369,11 +419,13 @@ def search_knowledge(message):
         print("🎯 RELEVANCE + DOMAIN FILTERING")
         print("=" * 80)
 
+
         for (
             document,
             metadata,
             distance
         ) in zip(
+
             documents,
             metadatas,
             distances
@@ -384,14 +436,17 @@ def search_knowledge(message):
                 "Unknown"
             )
 
+
             distance_ok = (
                 distance <= DISTANCE_THRESHOLD
             )
+
 
             domain_ok = source_matches_domain(
                 source,
                 detected_domain
             )
+
 
             if not distance_ok:
 
@@ -402,6 +457,7 @@ def search_knowledge(message):
 
                 continue
 
+
             if not domain_ok:
 
                 print(
@@ -410,6 +466,7 @@ def search_knowledge(message):
                 )
 
                 continue
+
 
             filtered_documents.append(
                 document
@@ -423,10 +480,13 @@ def search_knowledge(message):
                 distance
             )
 
+
             print(
                 f"✅ KEEP | {source} | "
                 f"Distance: {distance:.4f}"
             )
+
+
         # ==================================================
         # 7. Nothing Relevant Found
         # ==================================================
@@ -450,6 +510,7 @@ def search_knowledge(message):
             filtered_sources,
             filtered_distances
         ) = remove_duplicates(
+
             filtered_documents,
             filtered_sources,
             filtered_distances
@@ -464,23 +525,28 @@ def search_knowledge(message):
         print("📚 FINAL RAG CONTEXT")
         print("=" * 80)
 
+
         print("\nDetected Domain:")
+
         print(
             detected_domain
             if detected_domain
             else "Unknown"
         )
 
+
         for index, (
             document,
             source,
             distance
         ) in enumerate(
+
             zip(
                 filtered_documents,
                 filtered_sources,
                 filtered_distances
             ),
+
             start=1
         ):
 
