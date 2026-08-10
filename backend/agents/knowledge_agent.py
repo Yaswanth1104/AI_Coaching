@@ -1,7 +1,13 @@
 from pathlib import Path
 
-import chromadb
-from chromadb.utils import embedding_functions
+try:
+    import chromadb
+    from chromadb.utils import embedding_functions
+    CHROMA_AVAILABLE = True
+except ImportError:
+    chromadb = None
+    embedding_functions = None
+    CHROMA_AVAILABLE = False
 
 
 # ==========================================================
@@ -12,20 +18,25 @@ BASE_DIR = Path(__file__).parent.parent
 
 CHROMA_DIR = BASE_DIR / "knowledge" / "chroma_db"
 
-client = chromadb.PersistentClient(
-    path=str(CHROMA_DIR)
-)
-
-embedding_function = (
-    embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="all-MiniLM-L6-v2"
+if CHROMA_AVAILABLE:
+    client = chromadb.PersistentClient(
+        path=str(CHROMA_DIR)
     )
-)
 
-collection = client.get_or_create_collection(
-    name="support_knowledge",
-    embedding_function=embedding_function
-)
+    embedding_function = (
+        embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name="all-MiniLM-L6-v2"
+        )
+    )
+
+    collection = client.get_or_create_collection(
+        name="support_knowledge",
+        embedding_function=embedding_function
+    )
+else:
+    client = None
+    embedding_function = None
+    collection = None
 
 
 # ==========================================================
@@ -214,6 +225,10 @@ def remove_duplicates(
 # ==========================================================
 
 def search_knowledge(message):
+
+    if not CHROMA_AVAILABLE:
+        print("⚠ ChromaDB is not available. Using fallback knowledge.")
+        return fallback_knowledge()
 
     print("\n" + "=" * 80)
     print("📚 KNOWLEDGE RECOMMENDATION AGENT (RAG)")
