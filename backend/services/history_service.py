@@ -7,13 +7,18 @@ from datetime import datetime
 # ==========================================================
 # History File
 # ==========================================================
+#
+# Vercel/serverless functions cannot reliably write to the
+# deployed project directory.
+#
+# /tmp is writable during the function execution.
+#
+# NOTE:
+# /tmp storage is temporary and is NOT permanent production
+# storage. For permanent history, use MongoDB/PostgreSQL/etc.
+# ==========================================================
 
-HISTORY_FILE = os.path.join(
-    os.path.dirname(__file__),
-    "..",
-    "history",
-    "conversations.json"
-)
+HISTORY_FILE = "/tmp/conversations.json"
 
 
 # ==========================================================
@@ -22,10 +27,13 @@ HISTORY_FILE = os.path.join(
 
 def ensure_history_file():
 
-    os.makedirs(
-        os.path.dirname(HISTORY_FILE),
-        exist_ok=True
-    )
+    directory = os.path.dirname(HISTORY_FILE)
+
+    if directory:
+        os.makedirs(
+            directory,
+            exist_ok=True
+        )
 
     if not os.path.exists(HISTORY_FILE):
 
@@ -67,10 +75,6 @@ def create_report_id():
 
 # ==========================================================
 # Read All Conversation History
-#
-# IMPORTANT:
-# Old conversations may not have an "id".
-# This function automatically creates IDs for them.
 # ==========================================================
 
 def read_history():
@@ -87,6 +91,10 @@ def read_history():
 
             history = json.load(file)
 
+        # --------------------------------------------------
+        # Validate History Format
+        # --------------------------------------------------
+
         if not isinstance(
             history,
             list
@@ -94,9 +102,8 @@ def read_history():
 
             return []
 
-
         # --------------------------------------------------
-        # Add IDs to old conversations
+        # Add IDs to Old Conversations
         # --------------------------------------------------
 
         history_changed = False
@@ -107,22 +114,21 @@ def read_history():
                 item,
                 dict
             ):
+
                 continue
 
             report_id = item.get(
                 "id"
             )
 
-            # Old record does not have ID
             if not report_id:
 
                 item["id"] = create_report_id()
 
                 history_changed = True
 
-
         # --------------------------------------------------
-        # Save updated history
+        # Save Updated History
         # --------------------------------------------------
 
         if history_changed:
@@ -140,17 +146,7 @@ def read_history():
                     ensure_ascii=False
                 )
 
-            print("\n" + "=" * 80)
-            print("OLD CONVERSATION IDs MIGRATED")
-            print("=" * 80)
-
-            print(
-                "Missing report IDs were generated successfully."
-            )
-
-
         return history
-
 
     except (
         json.JSONDecodeError,
@@ -175,9 +171,8 @@ def get_conversation_history(
 
     history = read_history()
 
-
     # ------------------------------------------------------
-    # Only conversations belonging to this session
+    # Only Conversations Belonging To This Session
     # ------------------------------------------------------
 
     session_history = [
@@ -186,15 +181,21 @@ def get_conversation_history(
 
         for item in history
 
-        if item.get(
+        if isinstance(
+            item,
+            dict
+        )
+        and item.get(
             "session_id"
         ) == session_id
     ]
 
+    # ------------------------------------------------------
+    # Return Latest Conversations
+    # ------------------------------------------------------
 
-    # ------------------------------------------------------
-    # Return latest conversations
-    # ------------------------------------------------------
+    if limit is None:
+        return session_history
 
     return session_history[
         -limit:
@@ -222,9 +223,7 @@ def get_conversation_context(
             "context for this session."
         )
 
-
     context_parts = []
-
 
     for item in history:
 
@@ -236,7 +235,6 @@ def get_conversation_context(
             "customer_message",
             ""
         )
-
 
         # --------------------------------------------------
         # Coach Response
@@ -254,12 +252,10 @@ def get_conversation_context(
 
             coach = {}
 
-
         coach_response = coach.get(
             "recommended_response",
             ""
         )
-
 
         # --------------------------------------------------
         # Customer Understanding
@@ -276,7 +272,6 @@ def get_conversation_context(
         ):
 
             understanding = {}
-
 
         intent = understanding.get(
             "intent",
@@ -298,7 +293,6 @@ def get_conversation_context(
             ""
         )
 
-
         # --------------------------------------------------
         # Entities
         # --------------------------------------------------
@@ -315,7 +309,6 @@ def get_conversation_context(
 
             entities = {}
 
-
         product = entities.get(
             "product",
             ""
@@ -330,7 +323,6 @@ def get_conversation_context(
             "duration",
             ""
         )
-
 
         # --------------------------------------------------
         # Build Memory Block
@@ -351,11 +343,9 @@ Issue: {issue}
 Duration: {duration}
 """
 
-
         context_parts.append(
             conversation_text.strip()
         )
-
 
     # ------------------------------------------------------
     # Combine Previous Messages
@@ -381,6 +371,10 @@ def save_conversation(
     post_interaction_summary=None
 ):
 
+    # ------------------------------------------------------
+    # Validate Session ID
+    # ------------------------------------------------------
+
     if not session_id:
 
         raise ValueError(
@@ -388,17 +382,21 @@ def save_conversation(
             "to save conversation."
         )
 
+    # ------------------------------------------------------
+    # Ensure History File
+    # ------------------------------------------------------
 
-    # ======================================================
+    ensure_history_file()
+
+    # ------------------------------------------------------
     # Create Unique Report ID
-    # ======================================================
+    # ------------------------------------------------------
 
     report_id = create_report_id()
 
-
-    # ======================================================
+    # ------------------------------------------------------
     # Build Conversation Object
-    # ======================================================
+    # ------------------------------------------------------
 
     conversation = {
 
@@ -435,40 +433,51 @@ def save_conversation(
             post_interaction_summary or {}
     }
 
-
-    # ======================================================
+    # ------------------------------------------------------
     # Read Existing History
-    # ======================================================
+    # ------------------------------------------------------
 
     history = read_history()
 
-
-    # ======================================================
+    # ------------------------------------------------------
     # Add Current Conversation
-    # ======================================================
+    # ------------------------------------------------------
 
     history.append(
         conversation
     )
 
-
-    # ======================================================
+    # ------------------------------------------------------
     # Save Updated History
-    # ======================================================
+    # ------------------------------------------------------
 
-    with open(
-        HISTORY_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
+    try:
 
-        json.dump(
-            history,
-            file,
-            indent=4,
-            ensure_ascii=False
-        )
+        with open(
+            HISTORY_FILE,
+            "w",
+            encoding="utf-8"
+        ) as file:
 
+            json.dump(
+                history,
+                file,
+                indent=4,
+                ensure_ascii=False
+            )
+
+    except OSError as e:
+
+        print("\n" + "=" * 80)
+        print("HISTORY SAVE ERROR")
+        print("=" * 80)
+        print(e)
+
+        raise
+
+    # ------------------------------------------------------
+    # Debug
+    # ------------------------------------------------------
 
     print("\n" + "=" * 80)
     print("CONVERSATION SAVED")
@@ -482,10 +491,11 @@ def save_conversation(
         f"Session ID: {session_id}"
     )
 
+    print("=" * 80)
 
-    # ======================================================
+    # ------------------------------------------------------
     # Return Saved Conversation
-    # ======================================================
+    # ------------------------------------------------------
 
     return conversation
 
@@ -502,18 +512,27 @@ def get_conversation_by_id(
 
         return None
 
-
     history = read_history()
-
 
     for item in history:
 
+        if not isinstance(
+            item,
+            dict
+        ):
+
+            continue
+
         if str(
-            item.get("id", "")
-        ) == str(report_id):
+            item.get(
+                "id",
+                ""
+            )
+        ) == str(
+            report_id
+        ):
 
             return item
-
 
     return None
 
@@ -530,9 +549,7 @@ def delete_conversation(
 
         return False
 
-
     history = read_history()
-
 
     # ------------------------------------------------------
     # Check Existing Report
@@ -541,7 +558,6 @@ def delete_conversation(
     original_length = len(
         history
     )
-
 
     # ------------------------------------------------------
     # Remove Matching Report
@@ -554,10 +570,14 @@ def delete_conversation(
         for item in history
 
         if str(
-            item.get("id", "")
-        ) != str(report_id)
+            item.get(
+                "id",
+                ""
+            )
+        ) != str(
+            report_id
+        )
     ]
-
 
     # ------------------------------------------------------
     # Nothing Deleted
@@ -569,24 +589,37 @@ def delete_conversation(
 
         return False
 
-
     # ------------------------------------------------------
     # Save Updated History
     # ------------------------------------------------------
 
-    with open(
-        HISTORY_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
+    try:
 
-        json.dump(
-            updated_history,
-            file,
-            indent=4,
-            ensure_ascii=False
-        )
+        with open(
+            HISTORY_FILE,
+            "w",
+            encoding="utf-8"
+        ) as file:
 
+            json.dump(
+                updated_history,
+                file,
+                indent=4,
+                ensure_ascii=False
+            )
+
+    except OSError as e:
+
+        print("\n" + "=" * 80)
+        print("DELETE HISTORY ERROR")
+        print("=" * 80)
+        print(e)
+
+        return False
+
+    # ------------------------------------------------------
+    # Debug
+    # ------------------------------------------------------
 
     print("\n" + "=" * 80)
     print("CONVERSATION DELETED")
@@ -596,6 +629,7 @@ def delete_conversation(
         f"Report ID: {report_id}"
     )
 
+    print("=" * 80)
 
     return True
 
@@ -612,12 +646,10 @@ def clear_session_history(
 
         return
 
-
     history = read_history()
 
-
     # ------------------------------------------------------
-    # Keep conversations from other sessions
+    # Keep Conversations From Other Sessions
     # ------------------------------------------------------
 
     updated_history = [
@@ -631,24 +663,33 @@ def clear_session_history(
         ) != session_id
     ]
 
-
     # ------------------------------------------------------
     # Save Updated History
     # ------------------------------------------------------
 
-    with open(
-        HISTORY_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
+    try:
 
-        json.dump(
-            updated_history,
-            file,
-            indent=4,
-            ensure_ascii=False
-        )
+        with open(
+            HISTORY_FILE,
+            "w",
+            encoding="utf-8"
+        ) as file:
 
+            json.dump(
+                updated_history,
+                file,
+                indent=4,
+                ensure_ascii=False
+            )
+
+    except OSError as e:
+
+        print("\n" + "=" * 80)
+        print("CLEAR SESSION HISTORY ERROR")
+        print("=" * 80)
+        print(e)
+
+        return
 
     print("\n" + "=" * 80)
     print("SESSION HISTORY CLEARED")
@@ -657,6 +698,8 @@ def clear_session_history(
     print(
         f"Session ID: {session_id}"
     )
+
+    print("=" * 80)
 
 
 # ==========================================================
@@ -667,20 +710,29 @@ def clear_all_conversation_history():
 
     ensure_history_file()
 
+    try:
 
-    with open(
-        HISTORY_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
+        with open(
+            HISTORY_FILE,
+            "w",
+            encoding="utf-8"
+        ) as file:
 
-        json.dump(
-            [],
-            file,
-            indent=4,
-            ensure_ascii=False
-        )
+            json.dump(
+                [],
+                file,
+                indent=4,
+                ensure_ascii=False
+            )
 
+    except OSError as e:
+
+        print("\n" + "=" * 80)
+        print("CLEAR ALL HISTORY ERROR")
+        print("=" * 80)
+        print(e)
+
+        return
 
     print("\n" + "=" * 80)
     print("ALL CONVERSATION HISTORY CLEARED")
