@@ -40,17 +40,35 @@ CORS(app)
 # Register API Routes
 # ==========================================================
 
-app.register_blueprint(health_bp)
+app.register_blueprint(
+    health_bp,
+    url_prefix="/api"
+)
 
-app.register_blueprint(analyze_bp)
+app.register_blueprint(
+    analyze_bp,
+    url_prefix="/api"
+)
 
-app.register_blueprint(simulate_bp)
+app.register_blueprint(
+    simulate_bp,
+    url_prefix="/api"
+)
 
-app.register_blueprint(history_bp)
+app.register_blueprint(
+    history_bp,
+    url_prefix="/api"
+)
 
-app.register_blueprint(analytics_bp)
+app.register_blueprint(
+    analytics_bp,
+    url_prefix="/api"
+)
 
-app.register_blueprint(profile_bp)
+app.register_blueprint(
+    profile_bp,
+    url_prefix="/api"
+)
 
 
 # ==========================================================
@@ -65,13 +83,13 @@ if __name__ == "__main__":
 
     print("\nAvailable API Routes:")
 
-    print("GET  /health")
-    print("POST /analyze")
-    print("POST /simulate")
-    print("GET  /history")
-    print("GET  /analytics")
-    print("GET  /profile")
-    print("PUT  /profile")
+    print("GET  /api/health")
+    print("POST /api/analyze")
+    print("POST /api/simulate")
+    print("GET  /api/history")
+    print("GET  /api/analytics")
+    print("GET  /api/profile")
+    print("PUT  /api/profile")
 
     print("\n" + "=" * 80)
 
