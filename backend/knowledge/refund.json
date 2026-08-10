@@ -1,0 +1,18 @@
+{
+  "topic": "Refund",
+
+  "keywords": [
+    "refund",
+    "money",
+    "cancel",
+    "return"
+  ],
+
+  "troubleshooting": [
+    "Verify refund eligibility.",
+    "Check purchase date.",
+    "Explain refund timeline."
+  ],
+
+  "escalation": true
+}

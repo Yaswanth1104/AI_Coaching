@@ -1,0 +1,23 @@
+{
+  "topic": "Internet Connection",
+
+  "keywords": [
+    "internet",
+    "wifi",
+    "router",
+    "connection",
+    "network",
+    "offline"
+  ],
+
+  "troubleshooting": [
+    "Restart the router.",
+    "Check all cable connections.",
+    "Verify WAN light is ON.",
+    "Restart the modem.",
+    "Check for regional outages.",
+    "Escalate if unresolved after 30 minutes."
+  ],
+
+  "escalation": true
+}

@@ -1,0 +1,19 @@
+{
+  "topic": "Delivery",
+
+  "keywords": [
+    "delivery",
+    "shipment",
+    "tracking",
+    "parcel",
+    "late"
+  ],
+
+  "troubleshooting": [
+    "Check tracking number.",
+    "Verify delivery address.",
+    "Contact courier if delayed."
+  ],
+
+  "escalation": false
+}

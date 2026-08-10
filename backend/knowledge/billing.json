@@ -1,0 +1,21 @@
+{
+  "topic": "Billing",
+
+  "keywords": [
+    "bill",
+    "billing",
+    "payment",
+    "invoice",
+    "charged",
+    "amount"
+  ],
+
+  "troubleshooting": [
+    "Verify the invoice.",
+    "Check recent payments.",
+    "Explain billing breakdown.",
+    "Offer refund if applicable."
+  ],
+
+  "escalation": false
+}

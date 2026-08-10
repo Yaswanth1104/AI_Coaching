@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<button onclick="test()">Test API</button>
+
+<script>
+async function test() {
+
+    const response = await fetch("http://127.0.0.1:5000/analyze",{
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify({
+            message:"My internet has been down since yesterday."
+        })
+
+    });
+
+    const data = await response.json();
+
+    console.log(data);
+
+    alert(JSON.stringify(data,null,2));
+
+}
+</script>
+
+</body>
+</html>

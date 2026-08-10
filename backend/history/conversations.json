@@ -1,0 +1,72 @@
+[
+    {
+        "id": "7733ce21-d1bb-46b2-9705-0cbdb947c4c9",
+        "report_id": "7733ce21-d1bb-46b2-9705-0cbdb947c4c9",
+        "session_id": "d56e7c4e-3d60-4f99-9c03-9ba63c9db44f",
+        "timestamp": "2026-08-10 09:11:20",
+        "customer_message": "Customer:\nMy internet is not working since yesterday.",
+        "understanding": {
+            "intent": "Report Internet Issue",
+            "sentiment": "negative",
+            "emotion": "frustration",
+            "priority": "medium",
+            "entities": {
+                "product": "internet",
+                "issue": "not working",
+                "duration": "yesterday"
+            }
+        },
+        "coach": {
+            "recommended_response": "I'm sorry to hear your internet isn't working. To help me look into this for you, could you please confirm your account details?",
+            "suggested_actions": [
+                "Verify customer account details.",
+                "Ask follow-up questions before troubleshooting."
+            ],
+            "coaching_tips": [
+                "Always start by acknowledging the customer's issue.",
+                "Prioritize gathering necessary information before troubleshooting."
+            ],
+            "confidence": 95
+        },
+        "quality": {
+            "professionalism": 95,
+            "empathy": 95,
+            "grammar": 95,
+            "policy_compliance": 100,
+            "overall_score": 96,
+            "feedback": "Excellent customer response."
+        },
+        "supervisor": {
+            "decision": "approve",
+            "risk": "medium",
+            "needs_escalation": false,
+            "feedback": "Customer sentiment is negative, but the response can proceed.",
+            "final_score": 96,
+            "ready_to_send": true,
+            "escalation_required": false,
+            "priority": "medium",
+            "escalation_reason": "",
+            "missing_information": [],
+            "summary": "Final conversation review completed."
+        },
+        "escalation": {
+            "risk_level": "Low",
+            "needs_escalation": false,
+            "priority": "Low",
+            "reason": ""
+        },
+        "post_interaction_summary": {
+            "conversation_summary": "The customer reported their internet was not working since yesterday. The agent responded by acknowledging the issue and requesting account details.",
+            "customer_intent": "Report Internet Issue",
+            "sentiment_journey": "The customer started with frustration, and the agent's empathetic response aimed to de-escalate.",
+            "resolution_status": "Pending",
+            "resolution_quality_score": 96,
+            "strengths": [
+                "Empathetic opening",
+                "Clear next steps"
+            ],
+            "improvements": [],
+            "coaching_recommendations": []
+        }
+    }
+]
