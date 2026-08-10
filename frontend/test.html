@@ -1,34 +1,73 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <title>API Test</title>
+</head>
+
 <body>
 
-<button onclick="test()">Test API</button>
+    <button onclick="test()">Test API</button>
 
-<script>
-async function test() {
+    <script>
 
-    const response = await fetch("http://127.0.0.1:5000/analyze",{
+        async function test() {
 
-        method:"POST",
+            try {
 
-        headers:{
-            "Content-Type":"application/json"
-        },
+                const response = await fetch(
+                    "/api/analyze",
+                    {
+                        method: "POST",
 
-        body:JSON.stringify({
-            message:"My internet has been down since yesterday."
-        })
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
 
-    });
+                        body: JSON.stringify({
 
-    const data = await response.json();
+                            session_id: "test-session-001",
 
-    console.log(data);
+                            message:
+                                "My internet has been down since yesterday."
 
-    alert(JSON.stringify(data,null,2));
+                        })
+                    }
+                );
 
-}
-</script>
+
+                const data =
+                    await response.json();
+
+
+                console.log(data);
+
+
+                alert(
+                    JSON.stringify(
+                        data,
+                        null,
+                        2
+                    )
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "API Error:",
+                    error
+                );
+
+                alert(
+                    "API Error: " +
+                    error.message
+                );
+
+            }
+
+        }
+
+    </script>
 
 </body>
 </html>
