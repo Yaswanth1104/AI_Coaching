@@ -5,21 +5,29 @@ import axios from "axios";
 // ==========================================================
 
 const api = axios.create({
-    baseURL: "/api",
+    baseURL: "http://127.0.0.1:5000/api",
+
     headers: {
-        "Content-Type": "application/json",
-    },
+        "Content-Type": "application/json"
+    }
 });
 
 // ==========================================================
 // Analyze Customer Message
 // ==========================================================
 
-export const analyzeMessage = async (message, sessionId) => {
-    const response = await api.post("/analyze", {
-        message,
-        session_id: sessionId,
-    });
+export const analyzeMessage = async (
+    message,
+    sessionId
+) => {
+
+    const response = await api.post(
+        "/analyze",
+        {
+            message,
+            session_id: sessionId
+        }
+    );
 
     return response.data;
 };
@@ -28,11 +36,18 @@ export const analyzeMessage = async (message, sessionId) => {
 // Simulate Customer
 // ==========================================================
 
-export const simulateCustomer = async (scenario, persona) => {
-    const response = await api.post("/simulate", {
-        scenario,
-        persona,
-    });
+export const simulateCustomer = async (
+    scenario,
+    persona
+) => {
+
+    const response = await api.post(
+        "/simulate",
+        {
+            scenario,
+            persona
+        }
+    );
 
     return response.data;
 };
@@ -42,7 +57,10 @@ export const simulateCustomer = async (scenario, persona) => {
 // ==========================================================
 
 export const getAnalytics = async () => {
-    const response = await api.get("/analytics");
+
+    const response = await api.get(
+        "/analytics"
+    );
 
     return response.data;
 };
@@ -52,27 +70,40 @@ export const getAnalytics = async () => {
 // ==========================================================
 
 export const getHistory = async () => {
-    const response = await api.get("/history");
+
+    const response = await api.get(
+        "/history"
+    );
 
     return response.data;
 };
 
 // ==========================================================
-// Get One Conversation Report
+// Get Single Report
 // ==========================================================
 
-export const getReport = async (reportId) => {
-    const response = await api.get(`/history/${reportId}`);
+export const getReport = async (
+    reportId
+) => {
+
+    const response = await api.get(
+        `/history/${reportId}`
+    );
 
     return response.data;
 };
 
 // ==========================================================
-// Delete One Conversation Report
+// Delete Report
 // ==========================================================
 
-export const deleteReport = async (reportId) => {
-    const response = await api.delete(`/history/${reportId}`);
+export const deleteReport = async (
+    reportId
+) => {
+
+    const response = await api.delete(
+        `/history/${reportId}`
+    );
 
     return response.data;
 };
@@ -82,9 +113,16 @@ export const deleteReport = async (reportId) => {
 // ==========================================================
 
 export const getHealth = async () => {
-    const response = await api.get("/health");
+
+    const response = await api.get(
+        "/health"
+    );
 
     return response.data;
 };
+
+// ==========================================================
+// Default Export
+// ==========================================================
 
 export default api;

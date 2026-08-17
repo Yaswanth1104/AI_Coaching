@@ -11,83 +11,134 @@ from utils.json_parser import parse_json_response
 # ==========================================================
 
 def generate_coach_suggestion(message, knowledge=None):
-    """
-    Generate AI coaching suggestions.
-
-    Parameters:
-        message:
-            Customer message.
-
-        knowledge:
-            Knowledge retrieved by the Knowledge Recommendation
-            Agent.
-
-            If knowledge is not provided, this function will
-            retrieve knowledge itself. This allows the agent
-            to work both independently and inside LangGraph.
-
-    Returns:
-        {
-            recommended_response,
-            suggested_actions,
-            coaching_tips,
-            confidence
-        }
-    """
 
     print("\n" + "=" * 80)
     print("🤖 COACH AGENT")
     print("=" * 80)
 
-    print("\n📩 Customer Message:")
+    print("\n📩 Original Message:")
     print(message)
 
     # ======================================================
-    # Greetings (Skip AI)
+    # Safety
     # ======================================================
 
-    greetings = [
+    if not isinstance(message, str):
+        message = str(message)
+
+    message = message.strip()
+
+    # ======================================================
+    # Extract Current Customer Message
+    # ======================================================
+    #
+    # LangGraph may send previous conversation + current
+    # customer message together.
+    #
+    # We only need the actual current message here.
+    #
+    # ======================================================
+
+    if "Current Customer Message:" in message:
+
+        message = message.split(
+            "Current Customer Message:",
+            1
+        )[1].strip()
+
+        if "Important:" in message:
+
+            message = message.split(
+                "Important:",
+                1
+            )[0].strip()
+
+    # ======================================================
+    # Clean Previous Conversation
+    # ======================================================
+
+    if "Previous Conversation:" in message:
+
+        parts = message.split(
+            "Previous Conversation:"
+        )
+
+        if len(parts) > 1:
+
+            message = parts[-1].strip()
+
+    # ======================================================
+    # Final Message
+    # ======================================================
+
+    message = message.strip()
+
+    print("\n📩 Current Customer Message:")
+    print(message)
+
+    # ======================================================
+    # Greeting Detection
+    # ======================================================
+
+    greetings = {
         "hi",
         "hello",
         "hey",
         "hii",
+        "hiii",
         "good morning",
         "good afternoon",
         "good evening",
-        "hello ai coach"
-    ]
+        "hello ai coach",
+        "hi ai coach",
+        "hey ai coach"
+    }
 
-    if message.lower().strip() in greetings:
+    normalized_message = (
+        message
+        .lower()
+        .strip()
+        .rstrip("!.?")
+    )
+
+    if normalized_message in greetings:
 
         print("\n👋 Greeting Detected")
+        print("⏭️ Skipping OpenRouter call.")
 
-        return {
-            "recommended_response":
+        result = {
+            "recommended_response": (
                 "Hello! Welcome to Customer Support. "
-                "How can I assist you today?",
+                "How can I assist you today?"
+            ),
 
             "suggested_actions": [
-                "Ask the customer to explain the issue.",
-                "Collect complete information."
+                "Ask the customer to explain the issue."
             ],
 
             "coaching_tips": [
-                "Be polite.",
-                "Understand the customer's problem."
+                "Be polite and friendly."
             ],
 
             "confidence": 100
         }
 
-    # ======================================================
-    # Knowledge Recommendation Agent (RAG)
-    # ======================================================
+        print("\n========== FINAL COACH ==========")
 
-    # If LangGraph already retrieved knowledge,
-    # use that knowledge directly.
-    #
-    # If this agent is called independently,
-    # retrieve knowledge here as a fallback.
+        print(
+            json.dumps(
+                result,
+                indent=4
+            )
+        )
+
+        print("=================================")
+
+        return result
+
+    # ======================================================
+    # Knowledge Recommendation Agent
+    # ======================================================
 
     if knowledge is None:
 
@@ -100,7 +151,10 @@ def generate_coach_suggestion(message, knowledge=None):
 
         print("\n📚 Using knowledge supplied by LangGraph.")
 
-    # Safety check
+    # ======================================================
+    # Safety Check
+    # ======================================================
+
     if not isinstance(knowledge, dict):
 
         print("\n⚠️ Invalid knowledge format.")
@@ -112,17 +166,8 @@ def generate_coach_suggestion(message, knowledge=None):
             "escalation": False
         }
 
-    print("\n📚 Knowledge Retrieved\n")
-
-    print(
-        json.dumps(
-            knowledge,
-            indent=4
-        )
-    )
-
     # ======================================================
-    # Prepare Knowledge Context
+    # Knowledge Context
     # ======================================================
 
     troubleshooting = knowledge.get(
@@ -130,8 +175,10 @@ def generate_coach_suggestion(message, knowledge=None):
         []
     )
 
-    # Ensure troubleshooting is always a list
-    if not isinstance(troubleshooting, list):
+    if not isinstance(
+        troubleshooting,
+        list
+    ):
 
         troubleshooting = [
             str(troubleshooting)
@@ -142,136 +189,108 @@ def generate_coach_suggestion(message, knowledge=None):
         for item in troubleshooting
     )
 
-    # If no knowledge was retrieved
     if not knowledge_context.strip():
 
         knowledge_context = (
             "No specific troubleshooting knowledge "
-            "was retrieved for this issue."
+            "was retrieved."
         )
 
-    # ======================================================
-    # Load Coach Prompt
-    # ======================================================
-
-    prompt_path = (
-        Path(__file__).parent.parent
-        / "prompts"
-        / "coach_prompt.txt"
-    )
-
-    with open(
-        prompt_path,
-        "r",
-        encoding="utf-8"
-    ) as file:
-
-        prompt = file.read()
+    print("\n📚 Knowledge Context:")
+    print(knowledge_context)
 
     # ======================================================
-    # Insert Customer Message
+    # IMPORTANT TOKEN OPTIMIZATION
+    # ======================================================
+    #
+    # Do NOT load a large coach_prompt.txt.
+    #
+    # We create a very small prompt because the
+    # OpenRouter balance is currently limited.
+    #
     # ======================================================
 
-    prompt = prompt.replace(
-        "{message}",
-        message
-    )
+    prompt = f"""
+You are a customer support coach.
+
+Customer:
+{message}
+
+Knowledge:
+{knowledge_context}
+
+Return ONLY valid JSON:
+
+{{
+"recommended_response":"",
+"suggested_actions":[],
+"coaching_tips":[],
+"confidence":0
+}}
+
+Rules:
+- Keep response short.
+- Use the knowledge when relevant.
+- Do not invent information.
+- suggested_actions must be short.
+- coaching_tips must be short.
+- confidence must be 0-100.
+""".strip()
+
+    print("\n" + "-" * 80)
+    print("📝 COMPACT COACH PROMPT")
+    print("-" * 80)
+
+    print(prompt)
 
     # ======================================================
-    # Insert Retrieved Knowledge
-    # ======================================================
-
-    prompt = prompt.replace(
-        "{knowledge}",
-        knowledge_context
-    )
-
-    # ======================================================
-    # Call LLM
+    # OpenRouter Call
     # ======================================================
 
     response = generate_response(prompt)
 
-    print("\n🧠 RAW AI RESPONSE\n")
+    print("\n" + "-" * 80)
+    print("🧠 RAW COACH RESPONSE")
+    print("-" * 80)
+
     print(response)
 
     # ======================================================
-    # Handle Empty AI Response
+    # Empty AI Response
     # ======================================================
 
     if response is None:
 
-        print("\n❌ AI returned no response.")
+        print("\n❌ Coach AI returned no response.")
 
         return {
-            "recommended_response":
-                "I'm sorry, I couldn't generate a response.",
-
+            "recommended_response": (
+                "I'm sorry, I couldn't generate a response."
+            ),
             "suggested_actions": [],
-
             "coaching_tips": [],
-
             "confidence": 0
         }
 
     # ======================================================
-    # Parse JSON Response
+    # Parse JSON
     # ======================================================
 
     try:
 
         coach = parse_json_response(response)
 
-        # ==================================================
-        # Handle JSON Returned As String
-        # ==================================================
+        # --------------------------------------------------
+        # JSON returned as string
+        # --------------------------------------------------
 
         if isinstance(coach, str):
 
             coach = json.loads(coach)
 
-        # ==================================================
-        # Handle Nested JSON
-        # ==================================================
-
-        if (
-            isinstance(coach, dict)
-            and isinstance(
-                coach.get("recommended_response"),
-                str
-            )
-        ):
-
-            nested = (
-                coach["recommended_response"]
-                .strip()
-            )
-
-            if (
-                nested.startswith("{")
-                and nested.endswith("}")
-            ):
-
-                try:
-
-                    nested_json = json.loads(
-                        nested
-                    )
-
-                    if isinstance(
-                        nested_json,
-                        dict
-                    ):
-
-                        coach = nested_json
-
-                except Exception:
-
-                    pass
-
-        # ==================================================
-        # Validate Coach Object
-        # ==================================================
+        # --------------------------------------------------
+        # Validate
+        # --------------------------------------------------
 
         if not isinstance(coach, dict):
 
@@ -283,81 +302,97 @@ def generate_coach_suggestion(message, knowledge=None):
         # Default Values
         # ==================================================
 
-        coach.setdefault(
+        recommended_response = coach.get(
             "recommended_response",
-            "I'm sorry, I couldn't generate a response."
+            ""
         )
 
-        coach.setdefault(
+        suggested_actions = coach.get(
             "suggested_actions",
             []
         )
 
-        coach.setdefault(
+        coaching_tips = coach.get(
             "coaching_tips",
             []
         )
 
-        coach.setdefault(
+        confidence = coach.get(
             "confidence",
-            90
+            80
         )
 
         # ==================================================
-        # Validate Output Types
+        # Validate Response
         # ==================================================
 
         if not isinstance(
-            coach["recommended_response"],
+            recommended_response,
             str
         ):
 
-            coach["recommended_response"] = str(
-                coach["recommended_response"]
+            recommended_response = str(
+                recommended_response
             )
 
         if not isinstance(
-            coach["suggested_actions"],
+            suggested_actions,
             list
         ):
 
-            coach["suggested_actions"] = []
+            suggested_actions = []
 
         if not isinstance(
-            coach["coaching_tips"],
+            coaching_tips,
             list
         ):
 
-            coach["coaching_tips"] = []
+            coaching_tips = []
 
         try:
 
-            coach["confidence"] = int(
-                coach["confidence"]
+            confidence = int(
+                confidence
             )
 
-        except (TypeError, ValueError):
+        except (
+            TypeError,
+            ValueError
+        ):
 
-            coach["confidence"] = 90
+            confidence = 80
 
-        # Keep confidence between 0 and 100
-        coach["confidence"] = max(
+        confidence = max(
             0,
             min(
                 100,
-                coach["confidence"]
+                confidence
             )
         )
 
         # ==================================================
-        # Final Coach Output
+        # Final Result
         # ==================================================
+
+        result = {
+            "recommended_response":
+                recommended_response,
+
+            "suggested_actions":
+                suggested_actions,
+
+            "coaching_tips":
+                coaching_tips,
+
+            "confidence":
+                confidence
+        }
 
         print("\n========== FINAL COACH ==========")
 
         print(
             json.dumps(
-                coach,
+                result,
                 indent=4
             )
         )
@@ -368,10 +403,10 @@ def generate_coach_suggestion(message, knowledge=None):
         print("✅ COACH AGENT COMPLETED")
         print("=" * 80)
 
-        return coach
+        return result
 
     # ======================================================
-    # JSON Parsing Error
+    # JSON Error
     # ======================================================
 
     except Exception as e:
@@ -387,5 +422,7 @@ def generate_coach_suggestion(message, knowledge=None):
 
             "coaching_tips": [],
 
-            "confidence": 80
+            "confidence": 50,
+
+            "error": str(e)
         }
